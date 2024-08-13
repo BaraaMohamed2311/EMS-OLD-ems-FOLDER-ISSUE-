@@ -7,7 +7,8 @@ const connectionPool = mysql.createPool({
   port:3307,
   user     : 'root',
   password : process.env.DB_PASSWORD,
-  database : 'ems_db'
+  database : 'ems_db',
+  connectionLimit: 10,
 });
 
 //events for debugging and error handling
