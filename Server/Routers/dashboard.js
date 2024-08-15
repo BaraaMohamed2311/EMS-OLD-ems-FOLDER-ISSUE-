@@ -1,7 +1,7 @@
 const router = require("express").Router();
 const connectionPool = require("../Utils/connect_ems_db.js");
 const queryFunction = require("../Utils/queryFunction.js")
-const jwtVerify = require("../Utils/jwtVerify")
+const jwtVerify = require("../middlewares/jwtVerify.js")
 /*Admins who can access dashboard page are 2 roles => read-only admin & full access admin*/
 
 // GET Employees Data

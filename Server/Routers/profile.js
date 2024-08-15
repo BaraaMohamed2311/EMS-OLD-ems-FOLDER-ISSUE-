@@ -37,22 +37,25 @@ const storage = new GridFsStorage({
 
 
 // Update User Data
-router.put("/pic",upload.single('emp_img'),async (req,res)=>{
-    try{
-        const file = req.file
-        console.log("file",file)
-        // Respond with the file details
-        if (!file) {
-            throw new Error("File upload failed");
+/*Steps are 
+  Create user doc if not exist => delete old image if it was exist => upload new image =>
+    update user data with id of new image */
+router.put("/pic", createUser, async (req , res , next)=> {await deleteFromBucket(gfs_bucket ,req , res , next)} , upload.single('emp_img'),async (req,res)=>{
+    try{ 
+        if(gfs_bucket){
+        // find employee and update img file id 
+        console.log("file" , req.file) 
+        await Employees_Img_module.findOneAndUpdate({emp_email:req.query["emp_email"]},{emp_pic:{ file_name:req.file.filename , ImgId:req.file.id}});
+        // we pipe img file by reading from db then writing into response
+        gfs_bucket.openDownloadStreamByName(req.file.filename).pipe(res)
         }
-
-        // Respond with the file details
-        res.send({
-            success: true,
-            message: "Employee Profile Pic Uploaded Successfully",
-            name: file.filename,
-            contentType: file.contentType,
-        });
+        else{
+            res.send({
+              success: false,
+              message: "Mongo Bucket is undefined",
+          });
+        }
+        
     }
     catch(err){
         console.log("Error Update Profile Picture",err);
