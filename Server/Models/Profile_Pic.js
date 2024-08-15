@@ -1,15 +1,15 @@
+
 const mongoose = require('mongoose');
 
 
 const PIC_Schema = new mongoose.Schema({
-      name: String,
-      alt: String,
-      img: {
-        data: Buffer,
-        contentType: String
-    }
+  // we store image id of metadata at file collection and binary itself at Employees collection
+      file_name:{type:String},
+      ImgId:{type:String}
+      
 
-},{timestamps:true , collection:"Employees"})
+
+},{timestamps:false })
 
 
 const Profile_PIC_Schema = new mongoose.Schema({
@@ -17,7 +17,7 @@ const Profile_PIC_Schema = new mongoose.Schema({
     
       
         emp_email: {type:String, required:true},
-        emp_pic: PIC_Schema
+        emp_pic: PIC_Schema 
       
     
     

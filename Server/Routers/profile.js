@@ -1,27 +1,35 @@
 const router = require("express").Router();
 const multer = require('multer');
-const path = require("path");
-const fs = require("fs");
-const { GridFsStorage } = require("multer-gridfs-storage")
-// const Emp_Pic_Model = require("../Models/Profile_Pic")
-const mongo_url = process.env.MongoDB;
-console.log("mongo_url",mongo_url)
+const { GridFsStorage } = require("multer-gridfs-storage");
+const Employees_Img_module = require("../Models/Profile_Pic");
+const mongo_url = process.env.EMS_MongoDB;
+const mimetypes = new Set(["image/jpeg" ,"image/JPEG" , "image/png" , "image/jpg" , "image/JPG" , "image/PNG"]);
+const conect_mongodb = require("../Utils/connect_mongodb");
+const conect_bucket  = require("../Utils/connect_mongo_bucket");
+const deleteFromBucket = require("../middlewares/deleteFromBucket");
+const createUser = require("../middlewares/createUser");
+let gfs_bucket;
+async  function initializeConnectionMDB(){
+    const db = await conect_mongodb(process.env.EMS_MongoDB);
+    // connects uploads bucket
+    const bucket = await conect_bucket(db , "uploads");
+    return bucket
+}
+// initialize connections and return bucket for operations on it
+initializeConnectionMDB().then(bucket => gfs_bucket = bucket)
+
 const storage = new GridFsStorage({
     url: mongo_url, 
     file: (req, file) => {
-        console.log("file in grid " , file)
-      if (file.mimetype === "image/jpeg" || file.mimetype === "image/png" || file.mimetype === "image/jpg") {
+      if ( mimetypes.has(file.mimetype)) {
         const obj = {
-            bucketName: "photos",
+            bucketName: "uploads",
             filename:`${Date.now()}_${file.originalname}`
           }
-
-          console.log("file obj", obj)
         return obj;
       } else {
-        //Otherwise save to default bucket
-        return `${Date.now()}_${file.originalname}`
-      }
+        return null // if type isn't matched return null
+      } 
     },
 });
 
