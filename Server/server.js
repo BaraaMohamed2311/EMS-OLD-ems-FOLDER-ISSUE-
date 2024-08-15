@@ -10,14 +10,13 @@ const dashboardApis = require("./Routers/dashboard.js");
 const authApis = require("./Routers/auth.js");
 const profileApis = require("./Routers/profile.js");
 // Utils
-const connectMongoDB = require("./Utils/connect_mongodb.js")
-
-// Connect
-connectMongoDB()
-
+const connect_mongodb = require("./Utils/connect_mongodb.js");
+const connect_mongo_bucket = require("./Utils/connect_mongo_bucket.js");
+// connect to mongodb 
+const EMS_URL = process.env.EMS_MongoDB;
 // environment vars
 const PORT = process.env.PORT;
-
+ 
 // to unjson requests
 app.use(express.json());
 app.use(cors());
