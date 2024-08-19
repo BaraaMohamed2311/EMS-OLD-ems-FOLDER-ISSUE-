@@ -15,11 +15,11 @@ router.get("/employees",async (req,res)=>{
             await connectionPool.query(`SELECT * FROM employees LIMIT ${size}  OFFSET ${(pagination - 1) * size} `,
                 (error, results)=>{
                 if(error){
-                    res.json({success:false, message:"Error Query Employees"})
+                    return res.json({success:false, message:"Error Query Employees"})
                 }
                 // if no error but no employees
                 if(!results)
-                    res.json({success:false, message:"No Employees Found"})
+                    return res.json({success:false, message:"No Employees Found"})
                 /**/
                 res.json({success:true, body:results , message:"Successfully Queried Employees"})
             }) 
@@ -85,9 +85,9 @@ router.delete("/delete-employee",jwtVerify,(req,res)=>{
         connectionPool.query(`DELETE * WHERE emp_id = ${emp_id} OR emp_email = ${emp_email};`,
             (error, results)=>{
             if(error){
-                res.json({success:false, message:"Error Query Employees"})
+                return res.json({success:false, message:"Error Query Employees"})
             }
-            res.json({success:true , message:"Successfully Queried Employees"})
+            return res.json({success:true , message:"Successfully Queried Employees"})
         }) 
     }
     catch(err){

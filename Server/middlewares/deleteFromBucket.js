@@ -9,7 +9,7 @@ async function deleteFromBucket(bucket ,req , res , next){
         // if user hasn't had an image before go next and do not try to delete
 
         if(!old_employee.emp_pic.ImgId){
-            next();
+            return  next();
         }
         // if user had image get id & name of it
         /*use if condition before pass it to mongoose to prevent  BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer*/
@@ -20,17 +20,18 @@ async function deleteFromBucket(bucket ,req , res , next){
         /* we use cursor to retrieve file docs and check if file exists before deletion
            we use name to find certain file instead if getting all files*/
         const cursor = await bucket.find({filename:fileName});
-        const docsArray = await cursor.toArray();
+        const docsArray = await  cursor.toArray();
         console.log("docsArray",docsArray)
 
         if(fileID && docsArray.length > 0){
             await bucket.delete(fileID,(err)=>{ 
                 if(err){
-                    res.json({
+                    console.log("Error Deleting From Bucket",err);
+                    return res.json({
                         success:false,
                         message:"Error Deleting From Bucket"
                     })
-                    console.log("Error Deleting From Bucket",err);
+                    
                 }
                 console.log("old image deleted from bucket")
                 

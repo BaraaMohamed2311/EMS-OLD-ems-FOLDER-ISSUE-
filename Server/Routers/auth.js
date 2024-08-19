@@ -76,9 +76,9 @@ const isExist = require("../Utils/isExist.js")
                 console.log("check_employees_table", check_employees_table, "check_unregistered_table", check_unregistered_table);
         
                 if (check_unregistered_table) {
-                    res.json({ success: false, message: "User Already staged & Waiting For Approval" });
+                    return res.json({ success: false, message: "User Already staged & Waiting For Approval" });
                 } else if (check_employees_table) {
-                    res.json({ success: false, message: "User Already Registered & Approved" });
+                    return res.json({ success: false, message: "User Already Registered & Approved" });
                 } 
                 /* If user is not staged or registered before we start registering it */
             const saltRounds = 12;
