@@ -75,16 +75,15 @@ const isExist = require("../Utils/isExist.js")
         
                 console.log("check_employees_table", check_employees_table, "check_unregistered_table", check_unregistered_table);
         
-                if (check_unregistered_table) {
+                if (check_unregistered_table.exists) {
                     return res.json({ success: false, message: "User Already staged & Waiting For Approval" });
-                } else if (check_employees_table) {
+                } else if (check_employees_table.exists) {
                     return res.json({ success: false, message: "User Already Registered & Approved" });
                 } 
                 /* If user is not staged or registered before we start registering it */
-            const saltRounds = 12;
-            let hashed_password = await bcrypt.hash(user["emp_password"], saltRounds);
+
             // assign hashed to user before preparing for inserting into db 
-            user["emp_password"] = hashed_password
+            user["emp_password"] = User.hashPassword(user["emp_password"])
             // make entries array of hashed user
             let request_entries = Object.entries(user);
             /***************************************/ 
@@ -125,33 +124,166 @@ const isExist = require("../Utils/isExist.js")
         }
     })
 
-    // forget password
-    router.post("/forget-password",function(){
+    // update-user
+    router.put("/update-user",async function(req , res){
         try {
-
+            // no need to worry about user updating his role and perms as it's a different table for both
+            let {emp_id , ...userData} = req.body;
+            // first check user exists 
+            const query = `SELECT * FROM employees WHERE emp_id = ${emp_id}`
+            const { exists } = await isExist(query);
+            // make sure to remove fields that cannot be changed by user 
+            userData = fixedFields(userData);
+            if(exists){
+                User.editUserData(emp_id , Object.entries(userData));
+                res.json({
+                    success:true,
+                    message:"Your Data Updated Successfully"
+                })
+            }
+            else{
+                console.log("User Is Not Found");
+                res.json({
+                    success:false,
+                    message:"User Couldn't Found"
+                })
+            }
+            
         }
         catch (err) {
-            console.log("Error In Forgot Password Path ")
+            console.log("Error update-user Data Path" , err)
             res.json({
                 success:false,
-                message:"Error In Forgot Password Path "
+                message:"Error Updating Your Data Path"
             })
+        }
+    })
+
+
+    // forget password
+    router.post("/forget-password",async function(req , res){
+        try{   
+            const { emp_email } = req.body;
+            // search for user inside employees table
+            const query = `SELECT * FROM employees WHERE emp_email = ${`"${emp_email}"`}`
+            const userinTable = await isExist(query);
+            // USER NOT FOUND At EMPLOYEES TABLE
+            if(!userinTable.exists) 
+                res.status(404).json({
+                    success:false,
+                     message : "User Not Found"
+                });
+
+            // search for user inside mongodb reset token collection
+            console.log("user id ", userinTable)
+            let User = await ResetPasswordTokensModel.findOne({ emp_id: userinTable.data.emp_id });
+            // User Found IN Table But NOT FOUND IN MONGODB We create A document for him
+            if(!User) {
+                User = new ResetPasswordTokensModel({
+                    emp_id:userinTable.data.emp_id,
+                    ResetToken: "",
+                })
+            }
+                
+                // generate Reset Password Token
+                const reset_token = crypto.randomBytes(20).toString('hex');
+                // set user reset token and it's time of creation
+                User.ResetToken = reset_token;
+                
+                User.createdAtToken =  new Date();
+                // save to data base
+                await User.save()
+                // send link of reset
+                //"/reset-password/:userid/:token"
+                const reset_message = `Your request to reset your password was recieved,
+                 Now you have to visit this link to reset your password to a new one : ${process.env.RESETPASSPATH}/${User._id}/${reset_token}`
+                //(SendFrom , SendTo , subject , text)
+                const isSent =await mailHelpers("baraamohamed2311@gmail.com" ,"baraamohamed2311@gmail.com", "Password Reset" , reset_message);
+                
+                    if(isSent){
+                        res.status(200).json({success:true,message:"Reset Password Link Was Sent"});
+                    }
+                    else{
+                        res.status(501).json({success:false,message:"Reset Password Link Wasn't Sent"});
+                    }
+        }
+        catch(err){
+            console.log( "Forgot Password Error : " , err );
+            res.status(500).json({
+                success: false ,
+                message : `Error Sending Reset Password Link`
+                })
         }
     })
 
     // reset password
-    router.put("/reset-password",function(){
-        try {
+    router.put("/reset-password/:userId/:resetToken",async function(req ,res){
+        try{
+            const {emp_password} = req.body;
+            // userId is Id of user document at mongodb and not the emp_id field
+            const  {userId , resetToken} = req.params;
 
+            // get token & creation date & emp_id from mongodb
+            const resetTokenForUser = await ResetPasswordTokensModel.findOne({ _id:userId });
+
+            // passing created token at to new date class
+            let DateInstance = new Date(resetTokenForUser.createdAtToken);
+            let created_Token_at = {hour :DateInstance.getHours(),day:DateInstance.getDate()};
+
+            // USER NOT FOUND 
+            if(!resetTokenForUser) 
+                res.status(404).json({
+                    success:false,
+                     message : "User Not Found"
+                });
+
+                /*Defining lifeTime in hours and get current time and day object */
+                let token_lifetime = 1; // hour
+                let current_Time = {hour :new Date().getHours(),day:new Date().getDate()};
+                
+                
+                // check if token from url is same as in db & check resettoken created at db life time
+                if(resetToken === resetTokenForUser.ResetToken && 
+                   created_Token_at.hour + token_lifetime >= current_Time.hour && 
+                   created_Token_at.day === current_Time.day){
+                    
+                    // then token is still valid and we save new password into db
+                    const hashedPassword = await User.hashPassword(emp_password);
+
+                    const isReseted = await executeMySqlQuery(`UPDATE employees SET emp_password = ${`"${hashedPassword}"`} WHERE emp_id = ${resetTokenForUser.emp_id}`)
+                    
+                    if(isReseted){
+                        res.status(200).json({
+                            success:true,
+                            message : "Password Was Updated Successfully"
+                        });
+                     }
+                     else{
+                        res.json({
+                            success:false,
+                            message : "Password Was Not Updated"
+                        });
+                     }
+                }
+                else{
+                    res.status(501).json({
+                        success:false,
+                         message : "Password Wasn't Updated (Unvalid token)"
+                    });
+                }
+            
         }
-        catch (err) {
-            console.log("Error In Forgot Reset Password Path ")
-            res.json({
-                success:false,
-                message:"Error In Forgot Reset Password Path "
-            })
+        catch(err){
+            console.log("reset password Error : " , err );
+            res.status(500).json({
+                success: false ,
+                message : `Error Updating Password`
+                })
         }
     })
+
+    
+
     // private routes authentication
     router.post("/private-route",jwtVerify,function(req , res){
         try {

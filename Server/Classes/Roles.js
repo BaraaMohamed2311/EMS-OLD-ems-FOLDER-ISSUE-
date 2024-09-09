@@ -1,33 +1,22 @@
 class Roles {
-    constructor (roleName, arrOfPerms){
-        this.role = roleName;
-        this.permissions = new Set(arrOfPerms); // set for easy access & unque perms
+    // because no need to create instances we make them static and access through class
+    static roles = new Map([["SuperAdmin",100],["Admin",50],["Employee",0]]);
+    
+    static getRolePriority(userRole){
+ 
+        if(this.roles.has(userRole)){
+            return this.roles.get(userRole)
+        }
+        else{
+            console.log("This Role Does Not Exist in Roles Class");
+            return null ;
+        }
     }
 
+    
 
-    getRole(){
-        return this.role
-    }
-
-    getPerms(){
-        return this.permissions
-    }
-
-    addPerm(perm){
-        this.permissions.add(perm);
-    }
-
-    removePerm(perm){
-        this.permissions.delete(perm);
-    }
 
 }
 
 
-const SuperRole =new Roles("Super",["Modify-Perms","Modify-Role","Modify-User","Modify-Salary", "Remove-User"]) ;
-const AdminRole = new Roles("Admin",["Modify-User", "Remove-User"]);
-const EmployeeRole = new Roles("Employee",[]);
-
-
-
-module.exports = {SuperRole , AdminRole , EmployeeRole};
+module.exports =  Roles // export an instance
