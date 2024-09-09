@@ -39,14 +39,15 @@ const storage = new GridFsStorage({
 
 /**           Get User Image           **/
 // if user doesn't exist create it
-  router.get("/prof-img", createUser,async (req,res)=>{
+  router.get("/prof-img",async (req,res)=>{
     try{ 
         if(gfs_bucket){
         // search for user
         const employee = await Employees_Img_module.findOne({emp_email:req.query["emp_email"]});
+        
         // let cursor find and point to it's img in bucket
-
         if(!employee.emp_pic.file_name){
+          res.header("Content-Type", "application/json");
           return res.json({
             success: false,
             message: "User has no image",
@@ -55,12 +56,14 @@ const storage = new GridFsStorage({
         const cursor = await gfs_bucket.find({filename:employee.emp_pic.file_name});
         const docsArray = await cursor.toArray();
 
+        console.log("docsArray",docsArray)
         // we pipe img file by reading from db then writing into response
         if(docsArray[0]){
           gfs_bucket.openDownloadStreamByName(docsArray[0].filename).pipe(res)
           }
           else{
             console.log("Img file not found at GET")
+            res.header("Content-Type", "application/json");
             return res.json({
               success: false,
               message: "Image file not found",
@@ -69,6 +72,7 @@ const storage = new GridFsStorage({
           }
         }
         else{
+          res.header("Content-Type", "application/json");
           return res.json({
               success: false,
               message: "Mongo Bucket is undefined",
@@ -77,6 +81,7 @@ const storage = new GridFsStorage({
         
     }
     catch(err){
+        res.header("Content-Type", "application/json");
         console.log("Error GET Profile Picture",err);
         res.json({
             success:false,
@@ -92,6 +97,7 @@ const storage = new GridFsStorage({
   /* we create user as it could exist in mysql table but not created and assigned an image in mongodb that's apply to current and new employees */
 router.put("/update-prof-img", createUser, async (req , res , next)=> {await deleteFromBucket(gfs_bucket ,req , res , next)} , upload.single('emp_img'),async (req,res)=>{
     try{ 
+      console.log("update image requested")
         if(gfs_bucket){
         // find employee and update img file id 
         console.log("file" , req.file) 
@@ -100,6 +106,7 @@ router.put("/update-prof-img", createUser, async (req , res , next)=> {await del
         gfs_bucket.openDownloadStreamByName(req.file.filename).pipe(res)
         }
         else{
+          res.header("Content-Type", "application/json");
           return res.json({
               success: false,
               message: "Mongo Bucket is undefined",

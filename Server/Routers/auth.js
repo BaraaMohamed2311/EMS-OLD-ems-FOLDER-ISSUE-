@@ -30,6 +30,11 @@ const isExist = require("../Utils/isExist.js")
                 }
     
                 const user = result[0];
+                // get user role and send to response
+                user.role_name =  await User.getUserRole(user.emp_id , "Error Get Role Login");
+
+                user.emp_perms =  await User.getUserPerms(user.emp_id , "Error Get Perms Login");
+                console.log( "user.emp_perms", user.emp_perms)
     
                 // Compare request's password with hashed password
                 const match = await bcrypt.compare(password, user.emp_password);

@@ -14,6 +14,9 @@ function stringifyFields(isFor , entries){
                             // make sure to add the hashed password to db and not the original
                             values_field += `"${value}"`
                         }
+                        else{
+                            values_field += `${value}`
+                        }
                         if(indx !== request_entries.length - 1){
                             columns_field += ",";
                             values_field += ","
@@ -25,22 +28,29 @@ function stringifyFields(isFor , entries){
 
             case "joined" :
                 // as field1 = value1 , field2 = value2 .....
-                let joined = ""
+                let joined = "";
+                console.log("entries",entries)
                 // adding columns to be updated as col1 = newVal , col2 = newVal ....
                 entries.forEach(([key,value] , indx) => {
-                    if(typeof value == 'string')
+                    if(value && typeof value == 'string'){
                         joined += `${key} = "${value}"`
-                    if(indx !== entries.length - 1) joined += ','
+                    }else{
+                        joined += `${key} = ${value}`
+                    }
+                    if(indx !== entries.length - 1) joined += ',';
+               
                 })
 
                 return joined
 
+
             case "fields" :
                 // as field1 , field2 , .....
                 let fields = ""
-                entries.forEach(([key,value] , indx) => {
+                entries.forEach(( field , indx) => {
+                    fields += field;
                     if(indx !== entries.length - 1) fields += ','
-                })
+                });
 
                 return fields
     }
