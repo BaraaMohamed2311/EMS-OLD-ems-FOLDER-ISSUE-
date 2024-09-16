@@ -26,7 +26,7 @@ class Admin extends User {
             if( this.priority >= Roles.getRolePriority(otherUserRole)){
                 const fields = stringifyFields("joined",entries);
                 const query = `UPDATE employees SET ${fields} WHERE emp_id = ${emp_id}`
-                await executeMySqlQuery(query ,"Error Updating User Role" , "Success Updating Role");
+                await executeMySqlQuery(query ,"Error Updating User Role");
 
                 resolve(true);
             }
@@ -35,7 +35,8 @@ class Admin extends User {
                 resolve(false);
             }
         } catch(err){
-            reject()
+            console.error(err)
+            reject(err)
         }
         })
        
@@ -51,7 +52,7 @@ class Admin extends User {
         queries.forEach((query)=>{
             const promise = new Promise(async (resolve , reject)=>{
                 try{
-                    const result = await executeMySqlQuery(query ,"Error Updating User Role" , "Success Updating Role");
+                    const result = await executeMySqlQuery(query ,"Error Updating User Role" );
                     resolve(result);
                 }
                 catch(err){

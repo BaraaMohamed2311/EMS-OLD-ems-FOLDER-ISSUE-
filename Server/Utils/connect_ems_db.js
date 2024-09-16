@@ -4,7 +4,7 @@ const mysql  = require('mysql');
 
 const connectionPool = mysql.createPool({
   host     : 'localhost',
-  port:3307,
+  port     :  3307,
   user     : 'root',
   password : process.env.DB_PASSWORD,
   database : 'ems_db',

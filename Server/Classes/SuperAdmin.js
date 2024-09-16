@@ -2,6 +2,7 @@ const User = require("./User");
 const executeMySqlQuery = require("../Utils/executeMySqlQuery");
 const stringifyFields = require("../Utils/stringifyFields");
 const Roles = require("./Roles");
+const Perms = require("./Perms");
 
 /*
 
@@ -83,7 +84,8 @@ class SuperAdmin extends User {
                 resolve(false);
             }
         } catch(err){
-            reject()
+            console.error(err)
+            reject(err)
         }
         })
     }
@@ -109,7 +111,8 @@ class SuperAdmin extends User {
                 resolve(false);
             }
         } catch(err){
-            reject()
+            console.error(err)
+            reject(err)
         }
         })
     }

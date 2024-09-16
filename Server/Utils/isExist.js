@@ -18,11 +18,10 @@ async function isExist(query) {
             });
         });
         
-        console.log("result", result);
         return result; // Return true if exists, otherwise false
     } catch (error) {
-        console.log("isExist error", error);
-        throw new Error("Error in isExist function");
+        consoleLog(`isExist error ${error}` , "error");
+
     }
 }
 

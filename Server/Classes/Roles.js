@@ -8,13 +8,10 @@ class Roles {
             return this.roles.get(userRole)
         }
         else{
-            console.log("This Role Does Not Exist in Roles Class");
+            console.error("This Role Does Not Exist in Roles Class");
             return null ;
         }
     }
-
-    
-
 
 }
 

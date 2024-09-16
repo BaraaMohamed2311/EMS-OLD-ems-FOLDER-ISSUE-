@@ -3,19 +3,21 @@ require('dotenv').config()
 /**************************/
 const express = require("express");
 const app = express();
-const mysql = require("mysql");
 const cors = require("cors");
+const consoleLog = require("./Utils/consoleLog.js")
 // routers
-const dashboardApis = require("./Routers/dashboard.js");
+const listApis = require("./Routers/list.js");
 const authApis = require("./Routers/auth.js");
 const profileApis = require("./Routers/profile.js");
+const MailApis = require("./Routers/mail.js");
+const dashboardApis = require("./Routers/dashboard.js")
 // Utils
-const connect_mongodb = require("./Utils/connect_mongodb.js");
-const connect_mongo_bucket = require("./Utils/connect_mongo_bucket.js");
+
 // connect to mongodb 
 const EMS_URL = process.env.EMS_MongoDB;
 // environment vars
 const PORT = process.env.PORT;
+
   
 // to unjson requests
 app.use(express.json());
@@ -27,13 +29,17 @@ app.use((req, res, next) => {
     next();
   });
 // Routes
-app.use("/api/dashboard",dashboardApis)
+app.use("/api/list",listApis)
 app.use("/api/user",authApis)
 app.use("/api/profile",profileApis)
+app.use("/api/mail",MailApis)
+app.use("/api/dashboard",dashboardApis)
 
 
  
 // Server Launch
 app.listen(PORT,()=>{
-    console.log(`Server is Running on port : ${PORT}`);
+    consoleLog(`Server is Running on port : ${PORT}` , "success"); 
 })
+
+

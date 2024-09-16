@@ -14,7 +14,7 @@ cursor = conn.cursor()
 # Fetch all employees from the database
 cursor.execute("SELECT * FROM employees")
 employees = cursor.fetchall()  # Fetch all rows from the last executed statement
-
+"""
 password_txt = "1234"
 password = password_txt.encode('utf-8')
 print(password)
@@ -34,8 +34,19 @@ for employee in employees:
         'UPDATE employees SET emp_password = %s WHERE emp_id = %s',
         (emp_password, emp_id)
     )
+"""
 
-print(employees[-1])
+
+for employee in employees[:-4]:
+    print(employee)  # This will print the entire employee row
+    emp_id = employee[0]  # Assuming emp_id is the first column in the row
+    emp_email = employee[7]  # Assuming emp_id is the first column in the row
+    cursor.execute(
+        'DELETE FROM  ROLES WHERE  emp_email =(%s)',
+        (emp_email,)
+    )
+
+
 
 # Commit changes and close connection
 conn.commit()

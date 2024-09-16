@@ -47,7 +47,7 @@ const isExist = require("../Utils/isExist.js")
 
     
                 const { emp_password, ...userInfo } = user;
-                const token = await createToken(userInfo.emp_id, userInfo.emp_email);
+                const token = await createJWTToken(userInfo.emp_id, userInfo.emp_email);
     
 
                 // Send response with user data with token added and without password
@@ -59,27 +59,24 @@ const isExist = require("../Utils/isExist.js")
             });
             
         } catch (err) {
-            console.log("Error in Logining", err);
+            consoleLog(`Error in Logining ${err}`, "error");
             res.json({
                 success: false,
                 message: "Error in Logining"
             });
         }
     });
-
+/************************************************************************************************************************/
     // Register
     router.post("/register",async function(req , res){
         try {
     
                 let user = req.body;
         
-                console.log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+
                 const check_unregistered_table = await isExist(`SELECT * FROM unregistered_employees WHERE emp_email = "${user.emp_email}"`);
                 const check_employees_table = await isExist(`SELECT * FROM employees WHERE emp_email = "${user.emp_email}"`);
-                
-        
-                console.log("check_employees_table", check_employees_table, "check_unregistered_table", check_unregistered_table);
-        
+
                 if (check_unregistered_table.exists) {
                     return res.json({ success: false, message: "User Already staged & Waiting For Approval" });
                 } else if (check_employees_table.exists) {
@@ -112,16 +109,20 @@ const isExist = require("../Utils/isExist.js")
   
             // this time we insert to unregistered_employees where they are staged & waiting for approval
             const query = `INSERT INTO unregistered_employees (${columns_field}) VALUES (${values_field})`
-            // we cannot use id to select user before regestering so we use email as it's also unique
-            const final_query = `SELECT * FROM employees WHERE emp_email = "${user.emp_email}";`;
 
-            queryFunction( query , final_query ,
-                res , connectionPool ,
-                "Error Registering Employee" , "" , "Successfully Staged Employee Wait For Approval");
+
+            const registered = await executeMySqlQuery( query ,"Error Registering Employee" );
+
+            if(registered){
+                res.json({success:true,message:"Successfully Staged Employee To Wait List"})
+            }
+            else{
+                res.json({success:false,message:"Failed Staging Employee To Wait List"})
+            }
         
         }
         catch (err) {
-            console.log("Error In Registering New User" ,err)
+            console.error("Error In Registering New User" ,err)
             res.json({
                 success:false,
                 message:"Error In Registering New User"
@@ -129,6 +130,7 @@ const isExist = require("../Utils/isExist.js")
         }
     })
 
+    /************************************************************************************************************************/
     // update-user
     router.put("/update-user",async function(req , res){
         try {
@@ -147,16 +149,15 @@ const isExist = require("../Utils/isExist.js")
                 })
             }
             else{
-                console.log("User Is Not Found");
                 res.json({
                     success:false,
-                    message:"User Couldn't Found"
+                    message:"User Couldn't be Found"
                 })
             }
             
         }
         catch (err) {
-            console.log("Error update-user Data Path" , err)
+            consoleLog(`Error update-user Data Path ${err}` , "error")
             res.json({
                 success:false,
                 message:"Error Updating Your Data Path"
@@ -179,8 +180,6 @@ const isExist = require("../Utils/isExist.js")
                      message : "User Not Found"
                 });
 
-            // search for user inside mongodb reset token collection
-            console.log("user id ", userinTable)
             let User = await ResetPasswordTokensModel.findOne({ emp_id: userinTable.data.emp_id });
             // User Found IN Table But NOT FOUND IN MONGODB We create A document for him
             if(!User) {
