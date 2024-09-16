@@ -1,7 +1,10 @@
 const connectionPool = require("./connect_ems_db");
+const consoleLog = require("../Utils/consoleLog");
+
 async function isExist(query) {
     try {
         const result = await new Promise((resolve, reject) => {
+            
             connectionPool.query(query, (error, result) => {
                 if (error) {
                     console.log("Error in isExist Query", error);

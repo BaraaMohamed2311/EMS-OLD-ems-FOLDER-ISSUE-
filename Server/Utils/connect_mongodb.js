@@ -8,7 +8,6 @@ const mongoose = require("mongoose");
         console.log("Connected to MongoDB server using Mongoose");
         return mongoose.connection.db; // to use it to connect to bucket
         
-
     }
     catch(err){
         console.log("Error connection to DB")
@@ -17,7 +16,3 @@ const mongoose = require("mongoose");
 }
 
 module.exports = connect_mongodb;
-/*
-
-
-*/

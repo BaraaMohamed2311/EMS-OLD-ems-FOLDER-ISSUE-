@@ -1,21 +1,26 @@
 const router = require("express").Router();
-const mysql = require("mysql");
 const bcrypt = require("bcrypt");
 const connectionPool = require("../Utils/connect_ems_db.js")
 const jwtVerify = require("../middlewares/jwtVerify.js")
-const createToken = require("../Utils/createToken.js");
-const queryFunction = require("../Utils/queryFunction.js")
-const isExist = require("../Utils/isExist.js")
+const createJWTToken = require("../Utils/createJWTToken.js");
+const isExist = require("../Utils/isExist.js");
+const executeMySqlQuery = require("../Utils/executeMySqlQuery.js");
+const User = require("../Classes/User.js");
+const fixedFields = require("../Utils/fixedFields.js");
+const mailer = require("../Utils/mailer.js");
+const ResetPasswordTokensModel = require("../Models/ResetPassword.js");
+const crypto = require("crypto");
+const consoleLog = require("../Utils/consoleLog.js")
     // Login
     router.post("/login", async function(req, res) {
         try {
             // Extract request data
             const { emp_email, password } = req.body;
-    
+            
             // Query db
             connectionPool.query(`SELECT * FROM employees WHERE emp_email = ?`, [emp_email], async (err, result) => {
                 if (err) {
-                    console.log("err", err);
+
                     return res.json({
                         success: false,
                         message: "Error in Query DB"
@@ -34,7 +39,7 @@ const isExist = require("../Utils/isExist.js")
                 user.role_name =  await User.getUserRole(user.emp_id , "Error Get Role Login");
 
                 user.emp_perms =  await User.getUserPerms(user.emp_id , "Error Get Perms Login");
-                console.log( "user.emp_perms", user.emp_perms)
+
     
                 // Compare request's password with hashed password
                 const match = await bcrypt.compare(password, user.emp_password);
@@ -85,7 +90,8 @@ const isExist = require("../Utils/isExist.js")
                 /* If user is not staged or registered before we start registering it */
 
             // assign hashed to user before preparing for inserting into db 
-            user["emp_password"] = User.hashPassword(user["emp_password"])
+            user["emp_password"] = await User.hashPassword(user["emp_password"]);
+
             // make entries array of hashed user
             let request_entries = Object.entries(user);
             /***************************************/ 
@@ -165,13 +171,13 @@ const isExist = require("../Utils/isExist.js")
         }
     })
 
-
+/************************************************************************************************************************/
     // forget password
     router.post("/forget-password",async function(req , res){
         try{   
             const { emp_email } = req.body;
             // search for user inside employees table
-            const query = `SELECT * FROM employees WHERE emp_email = ${`"${emp_email}"`}`
+            const query = `SELECT * FROM employees WHERE emp_email ='${emp_email}'`
             const userinTable = await isExist(query);
             // USER NOT FOUND At EMPLOYEES TABLE
             if(!userinTable.exists) 
@@ -202,7 +208,7 @@ const isExist = require("../Utils/isExist.js")
                 const reset_message = `Your request to reset your password was recieved,
                  Now you have to visit this link to reset your password to a new one : ${process.env.RESETPASSPATH}/${User._id}/${reset_token}`
                 //(SendFrom , SendTo , subject , text)
-                const isSent =await mailHelpers("baraamohamed2311@gmail.com" ,"baraamohamed2311@gmail.com", "Password Reset" , reset_message);
+                const isSent = await mailer("baraamohamed2311@gmail.com" ,emp_email, "Password Reset" , reset_message);
                 
                     if(isSent){
                         res.status(200).json({success:true,message:"Reset Password Link Was Sent"});

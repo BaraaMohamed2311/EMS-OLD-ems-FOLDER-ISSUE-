@@ -17,7 +17,7 @@ function stringifyFields(isFor , entries){
                         else{
                             values_field += `${value}`
                         }
-                        if(indx !== request_entries.length - 1){
+                        if(indx !== entries.length - 1){
                             columns_field += ",";
                             values_field += ","
                         }
@@ -32,7 +32,7 @@ function stringifyFields(isFor , entries){
                 console.log("entries",entries)
                 // adding columns to be updated as col1 = newVal , col2 = newVal ....
                 entries.forEach(([key,value] , indx) => {
-                    if(value && typeof value == 'string'){
+                    if((value || value === 0) && typeof value == 'string'){
                         joined += `${key} = "${value}"`
                     }else{
                         joined += `${key} = ${value}`
