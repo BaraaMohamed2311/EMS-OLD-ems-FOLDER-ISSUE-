@@ -21,12 +21,12 @@ async function deleteFromBucket(bucket ,req , res , next){
            we use name to find certain file instead if getting all files*/
         const cursor = await bucket.find({filename:fileName});
         const docsArray = await  cursor.toArray();
-        console.log("docsArray",docsArray)
+
 
         if(fileID && docsArray.length > 0){
             await bucket.delete(fileID,(err)=>{ 
                 if(err){
-                    console.log("Error Deleting From Bucket",err);
+                    consoleLog(`Error Deleting From Bucket ${err}`,"error");
                     return res.json({
                         success:false,
                         message:"Error Deleting From Bucket"

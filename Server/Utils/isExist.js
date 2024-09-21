@@ -7,7 +7,7 @@ async function isExist(query) {
             
             connectionPool.query(query, (error, result) => {
                 if (error) {
-                    console.log("Error in isExist Query", error);
+                    consoleLog(`isExist error ${error}` , "error");
                     return reject({ exists: false, message: error });
                 }
                 
@@ -23,7 +23,7 @@ async function isExist(query) {
         
         return result; // Return true if exists, otherwise false
     } catch (error) {
-        consoleLog(`isExist error ${error}` , "error");
+        consoleLog(`isExist catch error ${error}` , "error");
 
     }
 }

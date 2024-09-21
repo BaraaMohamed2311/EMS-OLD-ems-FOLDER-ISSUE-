@@ -16,56 +16,55 @@ const consoleLog = require("../Utils/consoleLog.js")
         try {
             // Extract request data
             const { emp_email, password } = req.body;
+
+            if(!emp_email || !password) 
+                return res.status(400).json({success:false,message:"Bad Request"});
             
-            // Query db
-            connectionPool.query(`SELECT * FROM employees WHERE emp_email = ?`, [emp_email], async (err, result) => {
-                if (err) {
 
-                    return res.json({
-                        success: false,
-                        message: "Error in Query DB"
-                    });
-                }
-    
-                if (result.length === 0) {
-                    return res.json({
-                        success: false,
-                        message: "User not found"
-                    });
-                }
-    
-                const user = result[0];
-                // get user role and send to response
-                user.role_name =  await User.getUserRole(user.emp_id , "Error Get Role Login");
+            let user = await executeMySqlQuery(`SELECT * FROM employees WHERE emp_email = '${emp_email}'`)
 
-                user.emp_perms =  await User.getUserPerms(user.emp_id , "Error Get Perms Login");
-
-    
-                // Compare request's password with hashed password
-                const match = await bcrypt.compare(password, user.emp_password);
-                if (!match) {
-                    return res.json({
-                        success: false,
-                        message: 'Passwords Do Not Match'
-                    });
-                }
-
-    
-                const { emp_password, ...userInfo } = user;
-                const token = await createJWTToken(userInfo.emp_id, userInfo.emp_email);
-    
-
-                // Send response with user data with token added and without password
-                return res.json({
-                    success: true,
-                    body: { ...userInfo, token },
-                    message: "Successful Login"
+            if ( user.length < 1) {
+                return res.status(404).json({
+                    success: false,
+                    message: "User Not Found"
                 });
+            }
+            
+            
+            // get user role and send to response
+            user[0].role_name =  await User.getUserRole(user[0].emp_id , "Error Get Role Login");
+
+            user[0].emp_perms =  await User.getUserPerms(user[0].emp_id , "Error Get Perms Login");
+
+
+            // Compare request's password with hashed password
+            const match = await bcrypt.compare(password, user[0].emp_password);
+            if (!match) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Passwords Do Not Match'
+                });
+            }
+
+
+            
+
+
+            const { emp_password, ...userInfo } = user[0];
+            const token = await createJWTToken(userInfo.emp_id, userInfo.emp_email);
+            
+
+            return res.status(200).json({
+                success: true,
+                body: { ...userInfo, token },
+                message: "Successful Login"
             });
+
+
             
         } catch (err) {
             consoleLog(`Error in Logining ${err}`, "error");
-            res.json({
+            res.status(500).json({
                 success: false,
                 message: "Error in Logining"
             });
@@ -77,7 +76,9 @@ const consoleLog = require("../Utils/consoleLog.js")
         try {
     
                 let user = req.body;
-        
+
+                //Bad Request if
+                if(!user.emp_email || !user.emp_password) return res.status(400 ).json({success:false,message:"Bad Request"});
 
                 const check_unregistered_table = await isExist(`SELECT * FROM unregistered_employees WHERE emp_email = "${user.emp_email}"`);
                 const check_employees_table = await isExist(`SELECT * FROM employees WHERE emp_email = "${user.emp_email}"`);
@@ -142,6 +143,13 @@ const consoleLog = require("../Utils/consoleLog.js")
         try {
             // no need to worry about user updating his role and perms as it's a different table for both
             let {emp_id , ...userData} = req.body;
+
+
+            //Bad Request if
+            if(!emp_id) return res.status(400 ).json({success:false,message:"Bad Request"});
+
+
+
             // first check user exists 
             const query = `SELECT * FROM employees WHERE emp_id = ${emp_id}`
             const { exists } = await isExist(query);
@@ -155,7 +163,7 @@ const consoleLog = require("../Utils/consoleLog.js")
                 })
             }
             else{
-                res.json({
+                res.status(404).json({
                     success:false,
                     message:"User Couldn't be Found"
                 })
@@ -164,7 +172,7 @@ const consoleLog = require("../Utils/consoleLog.js")
         }
         catch (err) {
             consoleLog(`Error update-user Data Path ${err}` , "error")
-            res.json({
+            res.status(500).json({
                 success:false,
                 message:"Error Updating Your Data Path"
             })
@@ -176,6 +184,12 @@ const consoleLog = require("../Utils/consoleLog.js")
     router.post("/forget-password",async function(req , res){
         try{   
             const { emp_email } = req.body;
+
+            //Bad Request if
+            if(!emp_email) return res.status(400 ).json({success:false,message:"Bad Request"});
+
+
+
             // search for user inside employees table
             const query = `SELECT * FROM employees WHERE emp_email ='${emp_email}'`
             const userinTable = await isExist(query);
@@ -218,7 +232,7 @@ const consoleLog = require("../Utils/consoleLog.js")
                     }
         }
         catch(err){
-            console.log( "Forgot Password Error : " , err );
+            consoleLog( `Forgot Password Error : ${err} ` , "error" );
             res.status(500).json({
                 success: false ,
                 message : `Error Sending Reset Password Link`
@@ -232,6 +246,10 @@ const consoleLog = require("../Utils/consoleLog.js")
             const {emp_password} = req.body;
             // userId is Id of user document at mongodb and not the emp_id field
             const  {userId , resetToken} = req.params;
+
+
+            //Bad Request if
+            if(!emp_password || !userId || !resetToken) return res.status(400 ).json({success:false,message:"Bad Request"});
 
             // get token & creation date & emp_id from mongodb
             const resetTokenForUser = await ResetPasswordTokensModel.findOne({ _id:userId });
@@ -269,7 +287,7 @@ const consoleLog = require("../Utils/consoleLog.js")
                         });
                      }
                      else{
-                        res.json({
+                        res.status(500).json({
                             success:false,
                             message : "Password Was Not Updated"
                         });
@@ -295,19 +313,12 @@ const consoleLog = require("../Utils/consoleLog.js")
     
 
     // private routes authentication
-    router.post("/private-route",jwtVerify,function(req , res){
-        try {
-            res.json({
-                success:true,
-                message:"User Authenticated"
-            })
+    router.post("/private-route",jwtVerify , (req , res)=>{
+        try{
+            res.status(200).json({success:true , message:"You Are Authorized"})
         }
-        catch (err) {
-            console.log("Error In Private Route")
-            res.json({
-                success:false,
-                message:"Error In Private Route"
-            })
+        catch(err){
+            res.status(500).json({success:false , message:"Error In Private Routes"})
         }
     })
 

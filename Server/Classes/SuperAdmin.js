@@ -29,7 +29,7 @@ class SuperAdmin extends User {
     static async ChangeOtherUserRole( emp_id , otherUserRole , newRole , otherUserEmail){
         return new Promise(async (resolve , reject )=>{
             try{
-                console.log("--------------- can change Role ---------------",this.priority >= Roles.getRolePriority(otherUserRole))
+                
             // compares user modifier priority with other user's 
                 if( this.priority >= Roles.getRolePriority(otherUserRole)){
                     /*
@@ -54,7 +54,7 @@ class SuperAdmin extends User {
                     resolve(true);
                 }
             else{
-                console.log("SuperAdmins Cannot Edit Users With Higher Role");
+
                 resolve(false);
             }
         } catch(err){
@@ -68,18 +68,17 @@ class SuperAdmin extends User {
     // this updates emp_perms field in Perms table
     static async ChangeOtherUserPerms(emp_id , otherUserRole , StringOfNewPerms , oldUserPermsSet){
         
-        console.log("eeeeeeeeeeeexxxxxxxxxxxxxxxxxxxxxx")
-        console.log("parameters" , emp_id , otherUserRole , StringOfNewPerms , oldUserPermsSet)
+
         return new Promise(async (resolve , reject )=>{
             try{
-                console.log("check priority role" , this.priority >= Roles.getRolePriority(otherUserRole))
+                
                 if( this.priority >= Roles.getRolePriority(otherUserRole)){
                     // fetch map hash of perms and their ids
                     const permsHash =  await Perms.getAllPermsInTable();
-                    console.log("permsHash" ,permsHash)
+
                     const newPermsArray = StringOfNewPerms.split(", ");
                     const newPermsSet = new Set(newPermsArray);
-                    console.log("newPermsSet" ,newPermsSet)
+
                     // if user had old perms we delete those deleted 
                     if(!oldUserPermsSet.has("None")){
                         let deletePermsIDS = [];
@@ -95,7 +94,7 @@ class SuperAdmin extends User {
                         if(deletePermsIDS.length > 0){
                             // First we delete all perms related with user
                             const deleteQuery = `DELETE FROM  Employee_Perms WHERE emp_id = ${emp_id} AND perm_id IN ( ${deletePermsIDS.join(",")} )` 
-                            console.log("deleteQuery",deleteQuery)
+
                             await executeMySqlQuery(deleteQuery,"Error Deleting User Perms");
                         }
                         
@@ -120,7 +119,7 @@ class SuperAdmin extends User {
                 resolve(true);
             }
             else{
-                console.log("SuperAdmins Cannot Edit Users With Higher Role");
+
                 resolve(false);
             }
         } catch(err){
@@ -140,14 +139,13 @@ class SuperAdmin extends User {
             if( this.priority >= Roles.getRolePriority(otherUserRole)){
                 
                 const fields = stringifyFields("joined",entries);
-                console.log("fields",fields)
+
                 const query = `UPDATE employees SET ${fields} WHERE emp_id = ${emp_id}`
                 await executeMySqlQuery(query ,"Error Updating Other User  Data" , "Success Updating Other User Data");
                 
                 resolve(true);
             }
             else{
-                console.log("SuperAdmins Cannot Edit Users With Higher Role");
                 resolve(false);
             }
         } catch(err){
@@ -158,9 +156,9 @@ class SuperAdmin extends User {
     }
 
     static async RemoveOtherUser(emp_id){
-        const fields = stringifyFields("joined",entries);
-        // remove user data & refrenced role & perms
-        const queries = [`DELETE FROM employees WHERE emp_id = ${emp_id}` , `DELETE FROM Perms WHERE emp_id = ${emp_id}` , `DELETE FROM Roles WHERE emp_id = ${emp_id}` ]
+
+        // remove user data & refrenced role & perms ** note removing from employees should be the last due to keys refrenced from it at Employee_Perms & Roles
+        const queries = [ `DELETE FROM Employee_Perms WHERE emp_id = ${emp_id}` , `DELETE FROM Roles WHERE emp_id = ${emp_id}` , `DELETE FROM employees WHERE emp_id = ${emp_id}` ]
         const removeOtherUserPromises = [];
         queries.forEach((query)=>{
             const promise = new Promise(async (resolve , reject)=>{
@@ -176,9 +174,11 @@ class SuperAdmin extends User {
             removeOtherUserPromises.push(promise);
             
         })
-        console.log("removeOtherUserPromises FROM Super",removeOtherUserPromises)
-        Promise.allSettled(removeOtherUserPromises)
-
+        const settled = await Promise.allSettled(removeOtherUserPromises);
+        
+        // to return true if all promises fulfilled
+        return settled.filter((status)=> status !== "rejected").length === queries.length
+        
         
         
     }

@@ -1,13 +1,6 @@
 # EMS
 
-need to check MD perm on employee-delete dashboard
-check that salary and perms of others are not sent from server without perm
-send prev data to input of updateform so user doesn't have to re enter
-do not return bonus and salary if user has no MS
-can i do somthing if i know other's id
-register page & acceptance
-filtering perms
-when re login image broke
+cache onrefresh issue
 
 
 Users For Testing 

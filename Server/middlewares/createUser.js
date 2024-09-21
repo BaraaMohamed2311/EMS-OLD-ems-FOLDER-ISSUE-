@@ -14,7 +14,7 @@ async function createUser(req , res , next){
         })
 
         await user.save(); // save to db
-        console.log("User was created in mongodb" , user)
+
         
     }
     

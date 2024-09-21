@@ -29,7 +29,6 @@ function stringifyFields(isFor , entries){
             case "joined" :
                 // as field1 = value1 , field2 = value2 .....
                 let joined = "";
-                console.log("entries",entries)
                 // adding columns to be updated as col1 = newVal , col2 = newVal ....
                 entries.forEach(([key,value] , indx) => {
                     if((value || value === 0) && typeof value == 'string'){
