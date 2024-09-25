@@ -12,8 +12,13 @@ const PORT = process.env.PORT;
   appUses(express ,app);
 
 
+  app.get('/', (req, res) => {
+    res.send('Welcome To EMS Server')
+  })
+
 // Server Launch
-app.listen(PORT,()=>{
+app.listen(PORT,(req, res)=>{
+    res
     consoleLog(`Server is Running on port : ${PORT}` , "success"); 
 })
 

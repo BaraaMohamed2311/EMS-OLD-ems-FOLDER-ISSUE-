@@ -1,0 +1,75 @@
+version: '3.8'
+
+# mongodb won't be added as an image as it's hosted on mongo cloud atlas
+
+services:
+
+  ems-client:
+    build: 
+      context: ./ems/
+      dockerfile: Dockerfile.frontend
+    container_name: ems_client
+
+    
+
+    ports:
+      - 3000:3000
+
+    
+    networks:
+      - ems-net 
+
+
+  ems-server:
+    build: 
+      context: ./Server/
+      dockerfile: Dockerfile.backend
+    container_name: ems_server
+
+    
+    environment:
+      - PORT=${PORT}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - SECRET_KEY=${SECRET_KEY}
+      - EMS_MongoDB=${EMS_MongoDB}
+      - RESETPASSPATH=${RESETPASSPATH}
+      - MAILERPASS=${MAILERPASS} 
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PORT=${DB_PORT}
+   
+    
+    ports:
+      - 5500:5500
+
+    
+    networks:
+      - ems-net
+
+
+
+
+  db_mysql:
+    image: mysql:latest
+    command: mysql -uroot -p -P3306 -h host.docker.internal
+    container_name: mysql_server
+ 
+    volumes:
+      - ./ems_db/:/var/lib/mysql/
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE:  ${DB_NAME}
+    ports:
+      - 3307:3306
+    
+    networks:
+      - ems-net
+
+
+
+networks:
+  ems-net :
+
+
+
+

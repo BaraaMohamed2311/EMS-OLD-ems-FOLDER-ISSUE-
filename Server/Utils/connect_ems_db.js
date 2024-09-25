@@ -1,13 +1,14 @@
 // configuring dotenv to access variables
 require('dotenv').config()
+
 const mysql  = require('mysql');
 
 const connectionPool = mysql.createPool({
   host     : 'localhost',
-  port     :  3307,
-  user     : 'root',
+  port     :  process.env.DB_PORT,
+  user     : process.env.DB_USER,
   password : process.env.DB_PASSWORD,
-  database : 'ems_db',
+  database : process.env.DB_NAME,
   connectionLimit: 10,
 });
 
