@@ -8,7 +8,7 @@ async function executeMySqlQuery(query, error_msg) {
             return new Promise((resolve, reject) => {
                 connectionPool.query(`${query};`, (error, results) => {
                     if (error) {
-                        consoleLog(`executeMySqlQuery error ${error}` , "error");
+                        console.error(`executeMySqlQuery error ` ,error );
                         return reject(false); // Reject on error
                     }
                     resolve(results); // Resolve if no error

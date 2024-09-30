@@ -42,7 +42,7 @@ class User {
 
     static async getUserPerms(emp_id , err_msg ){
         //COALESCE(NULLIF()) to replace empty string and null with None by default
-        const query = `SELECT p.perm_name FROM Perms p JOIN Employee_Perms ep ON p.perm_id = ep.perm_id WHERE ep.emp_id = ${emp_id} `
+        const query = `SELECT p.perm_name FROM perms p JOIN Employee_Perms ep ON p.perm_id = ep.perm_id WHERE ep.emp_id = ${emp_id} `
         // [0] as result is in array form but Perms field has a single value as string 
         const result = await executeMySqlQuery(query , err_msg);
             return result.length > 0 ? result.map((perm)=> perm.perm_name) : ["None"] ;  
