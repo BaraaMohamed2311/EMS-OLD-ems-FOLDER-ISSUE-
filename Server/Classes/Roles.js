@@ -1,4 +1,4 @@
-class Roles {
+class roles {
     // because no need to create instances we make them static and access through class
     static roles = new Map([["SuperAdmin",100],["Admin",50],["Employee",0]]);
     
@@ -8,7 +8,7 @@ class Roles {
             return this.roles.get(userRole)
         }
         else{
-            console.error("This Role Does Not Exist in Roles Class");
+            console.error("This Role Does Not Exist in roles Class");
             return null ;
         }
     }
@@ -16,4 +16,4 @@ class Roles {
 }
 
 
-module.exports =  Roles // export an instance
+module.exports =  roles // export an instance

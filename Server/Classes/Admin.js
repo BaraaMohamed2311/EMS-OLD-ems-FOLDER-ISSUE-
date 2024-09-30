@@ -1,7 +1,7 @@
 const User = require("./User");
 const executeMySqlQuery = require("../Utils/executeMySqlQuery");
 const stringifyFields = require("../Utils/stringifyFields");
-const Roles = require("./Roles");
+const roles = require("./roles");
 const consoleLog = require("../Utils/consoleLog");
 /*
 
@@ -24,7 +24,7 @@ class Admin extends User {
         return new Promise(async (resolve , reject )=>{
             try{
                
-            if( this.priority >= Roles.getRolePriority(otherUserRole)){
+            if( this.priority >= roles.getRolePriority(otherUserRole)){
                 const fields = stringifyFields("joined",entries);
                 const query = `UPDATE employees SET ${fields} WHERE emp_id = ${emp_id}`
                 await executeMySqlQuery(query ,"Error Updating User Role");
@@ -45,10 +45,10 @@ class Admin extends User {
     }
     // other user must be admin or less role, cannot be superAdmin
     async RemoveOtherUser(emp_id){
-        if( this.priority >= Roles.getRolePriority(otherUserRole)){
+        if( this.priority >= roles.getRolePriority(otherUserRole)){
 
         // remove user data & refrenced role & perms
-        const queries = [`DELETE FROM Employee_Perms WHERE emp_id = ${emp_id}` , `DELETE FROM Roles WHERE emp_id = ${emp_id}` , `DELETE FROM employees WHERE emp_id = ${emp_id}` ]
+        const queries = [`DELETE FROM employee_perms WHERE emp_id = ${emp_id}` , `DELETE FROM roles WHERE emp_id = ${emp_id}` , `DELETE FROM employees WHERE emp_id = ${emp_id}` ]
         const removeOtherUserPromises = [];
         queries.forEach((query)=>{
             const promise = new Promise(async (resolve , reject)=>{

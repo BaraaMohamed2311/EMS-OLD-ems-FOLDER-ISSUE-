@@ -1,8 +1,8 @@
 const User = require("./User");
 const executeMySqlQuery = require("../Utils/executeMySqlQuery");
 const stringifyFields = require("../Utils/stringifyFields");
-const Roles = require("./Roles");
-const Perms = require("./Perms");
+const roles = require("./roles");
+const perms = require("./perms");
 
 /*
 
@@ -25,28 +25,28 @@ class SuperAdmin extends User {
 
 
     
-    // this updates role_name field in Roles table
+    // this updates role_name field in roles table
     static async ChangeOtherUserRole( emp_id , otherUserRole , newRole , otherUserEmail){
         return new Promise(async (resolve , reject )=>{
             try{
                 
             // compares user modifier priority with other user's 
-                if( this.priority >= Roles.getRolePriority(otherUserRole)){
+                if( this.priority >= roles.getRolePriority(otherUserRole)){
                     /*
                         if Role was Employee and new Role is not then we add user with new Role
                         if both not Employee we only need to update
 
                     */
                     if(otherUserRole === "Employee" && newRole !== "Employee"){
-                        const query = `INSERT INTO Roles (emp_id , emp_email , role_name) VALUES (${emp_id},'${otherUserEmail}','${newRole}')`
+                        const query = `INSERT INTO roles (emp_id , emp_email , role_name) VALUES (${emp_id},'${otherUserEmail}','${newRole}')`
                         await executeMySqlQuery(query ,"Error Updating User Role");
                     }
                     else if(otherUserRole !== "Employee" && newRole !== "Employee"){
-                        const query = `UPDATE Roles SET role_name = '${newRole}' WHERE emp_id = ${emp_id}`
+                        const query = `UPDATE roles SET role_name = '${newRole}' WHERE emp_id = ${emp_id}`
                         await executeMySqlQuery(query ,"Error Updating User Role");
                     }
                     else{
-                        const query = `DELETE FROM Roles  WHERE emp_id = ${emp_id}`
+                        const query = `DELETE FROM roles  WHERE emp_id = ${emp_id}`
                         await executeMySqlQuery(query ,"Error Updating User Role");
                     }
                     
@@ -65,56 +65,56 @@ class SuperAdmin extends User {
     }
 
     
-    // this updates emp_perms field in Perms table
-    static async ChangeOtherUserPerms(emp_id , otherUserRole , StringOfNewPerms , oldUserPermsSet){
+    // this updates emp_perms field in perms table
+    static async ChangeOtherUserperms(emp_id , otherUserRole , StringOfNewperms , oldUserpermsSet){
         
 
         return new Promise(async (resolve , reject )=>{
             try{
                 
-                if( this.priority >= Roles.getRolePriority(otherUserRole)){
+                if( this.priority >= roles.getRolePriority(otherUserRole)){
                     // fetch map hash of perms and their ids
-                    const permsHash =  await Perms.getAllPermsInTable();
+                    const permsHash =  await perms.getAllpermsInTable();
 
-                    const newPermsArray = StringOfNewPerms.split(", ");
-                    const newPermsSet = new Set(newPermsArray);
+                    const newpermsArray = StringOfNewperms.split(", ");
+                    const newpermsSet = new Set(newpermsArray);
 
                     // if user had old perms we delete those deleted 
-                    if(!oldUserPermsSet.has("None")){
-                        let deletePermsIDS = [];
+                    if(!oldUserpermsSet.has("None")){
+                        let deletepermsIDS = [];
 
                         // only add id of perm to be deleted if it's not in old perms
-                        Array.from(oldUserPermsSet).forEach((oldPerm , indx)=>{
-                            if(!newPermsSet.has(oldPerm)){
-                                deletePermsIDS.push(` ${permsHash.get(oldPerm)}  `);
+                        Array.from(oldUserpermsSet).forEach((oldPerm , indx)=>{
+                            if(!newpermsSet.has(oldPerm)){
+                                deletepermsIDS.push(` ${permsHash.get(oldPerm)}  `);
                             }
                         })
                         
                         // if there is perms to delete execute query
-                        if(deletePermsIDS.length > 0){
+                        if(deletepermsIDS.length > 0){
                             // First we delete all perms related with user
-                            const deleteQuery = `DELETE FROM  Employee_Perms WHERE emp_id = ${emp_id} AND perm_id IN ( ${deletePermsIDS.join(",")} )` 
+                            const deleteQuery = `DELETE FROM  employee_perms WHERE emp_id = ${emp_id} AND perm_id IN ( ${deletepermsIDS.join(",")} )` 
 
-                            await executeMySqlQuery(deleteQuery,"Error Deleting User Perms");
+                            await executeMySqlQuery(deleteQuery,"Error Deleting User perms");
                         }
                         
                     }
 
                     // no new perms will be added to user
-                    if(StringOfNewPerms === "None") return resolve(true); 
+                    if(StringOfNewperms === "None") return resolve(true); 
                     
                     
-                    let addingPermsQuery = [];
+                    let addingpermsQuery = [];
                     
 
                     // if perm wasn't exist in old perms and exists in all hashed perms then insert it 
-                    StringOfNewPerms.split(", ").forEach((perm)=>{
-                        if(permsHash.has(perm) && !oldUserPermsSet.has(perm))
-                            addingPermsQuery.push(`(${emp_id},${permsHash.get(perm)})`); // to get perm id
+                    StringOfNewperms.split(", ").forEach((perm)=>{
+                        if(permsHash.has(perm) && !oldUserpermsSet.has(perm))
+                            addingpermsQuery.push(`(${emp_id},${permsHash.get(perm)})`); // to get perm id
                     })
 
-                    if(addingPermsQuery.length > 0)
-                     await executeMySqlQuery("INSERT INTO Employee_Perms (emp_id , perm_id) VALUES" + addingPermsQuery.join(",") ,"Error Updating User Perms");
+                    if(addingpermsQuery.length > 0)
+                     await executeMySqlQuery("INSERT INTO employee_perms (emp_id , perm_id) VALUES" + addingpermsQuery.join(",") ,"Error Updating User perms");
                 
                 resolve(true);
             }
@@ -136,7 +136,7 @@ class SuperAdmin extends User {
         return new Promise(async (resolve , reject )=>{
             try{
                 
-            if( this.priority >= Roles.getRolePriority(otherUserRole)){
+            if( this.priority >= roles.getRolePriority(otherUserRole)){
                 
                 const fields = stringifyFields("joined",entries);
 
@@ -157,8 +157,8 @@ class SuperAdmin extends User {
 
     static async RemoveOtherUser(emp_id){
 
-        // remove user data & refrenced role & perms ** note removing from employees should be the last due to keys refrenced from it at Employee_Perms & Roles
-        const queries = [ `DELETE FROM Employee_Perms WHERE emp_id = ${emp_id}` , `DELETE FROM Roles WHERE emp_id = ${emp_id}` , `DELETE FROM employees WHERE emp_id = ${emp_id}` ]
+        // remove user data & refrenced role & perms ** note removing from employees should be the last due to keys refrenced from it at employee_perms & roles
+        const queries = [ `DELETE FROM employee_perms WHERE emp_id = ${emp_id}` , `DELETE FROM roles WHERE emp_id = ${emp_id}` , `DELETE FROM employees WHERE emp_id = ${emp_id}` ]
         const removeOtherUserPromises = [];
         queries.forEach((query)=>{
             const promise = new Promise(async (resolve , reject)=>{

@@ -1,7 +1,7 @@
 const router = require("express").Router();
 const jwtVerify = require("../middlewares/jwtVerify.js");
 const User = require("../Classes/User.js");
-const Perms = require("../Classes/Perms.js");
+const perms = require("../Classes/perms.js");
 const SuperAdmin = require("../Classes/SuperAdmin.js");
 const Admin = require("../Classes/Admin.js");
 const stringifyFields = require("../Utils/stringifyFields.js");
@@ -21,7 +21,7 @@ router.get("/employees",jwtVerify,async (req,res)=>{
 
 
         const Modifier_role = await User.getUserRole(emp_id, "Error Getting Role of modifier /employees");
-        const Modifier_Perms = new Perms(await User.getUserPerms(emp_id, "Error Getting Perms of modifier /employees"));
+        const Modifier_perms = new perms(await User.getUserperms(emp_id, "Error Getting perms of modifier /employees"));
 
     if (Modifier_role === "Employee") {
         return res.status(401).json({ success: false, message: "Employee Role cannot access The list" });
@@ -30,21 +30,21 @@ router.get("/employees",jwtVerify,async (req,res)=>{
 
     /** Define Joining TYPE  **/
     // if we left joining no need to add on conditions as not all users are going to exist in employee and other tables
-    const Roles_JOIN = !role_name || role_name === "Employee"  ? " LEFT JOIN Roles r ON e.emp_id = r.emp_id " : " JOIN Roles r ON e.emp_id = r.emp_id " ;
-    const Perms_JOIN = emp_perms ? " JOIN Employee_Perms ep ON e.emp_id = ep.emp_id \n JOIN Perms p  ON ep.perm_id = p.perm_id " : "  LEFT JOIN Employee_Perms ep ON e.emp_id = ep.emp_id \n LEFT JOIN Perms p ON ep.perm_id = p.perm_id  ";
+    const roles_JOIN = !role_name || role_name === "Employee"  ? " LEFT JOIN roles r ON e.emp_id = r.emp_id " : " JOIN roles r ON e.emp_id = r.emp_id " ;
+    const perms_JOIN = emp_perms ? " JOIN employee_perms ep ON e.emp_id = ep.emp_id \n JOIN perms p  ON ep.perm_id = p.perm_id " : "  LEFT JOIN employee_perms ep ON e.emp_id = ep.emp_id \n LEFT JOIN perms p ON ep.perm_id = p.perm_id  ";
 
     /**  Filter Conditions **/
     const Rest_CONDITION = restFilters ? JoinFiltering(Object.entries(restFilters),"e") : "" ;
-    const Roles_CONDITION = !role_name || role_name === "Employee" ? "" : JoinFiltering(Object.entries({role_name:role_name}),"r") ;
+    const roles_CONDITION = !role_name || role_name === "Employee" ? "" : JoinFiltering(Object.entries({role_name:role_name}),"r") ;
     // filtering gouped values on perms will be done using HAVING keyword & FIND_IN_SET which searches for string in string seperated by ", "
-    const Perms_CONDITION = emp_perms ? `
+    const perms_CONDITION = emp_perms ? `
             HAVING 
             FIND_IN_SET('${emp_perms}', GROUP_CONCAT(DISTINCT p.perm_name)) > 0 ` : "";
 
     /**  Is Accessible Conditions **/
     // default value of those columns would be '' if user doen't have their perms
     // logically if user have permission to modify salary then he could see it but other props like roles, perms he can see it anyway even with no role to modify
-    const access_salary = (Modifier_Perms.isPermExist("Modify Salary") || Modifier_Perms.isPermExist("Display Salary")) ? " e.emp_salary, e.emp_bonus " : " '' AS emp_salary , '' AS emp_bonus "
+    const access_salary = (Modifier_perms.isPermExist("Modify Salary") || Modifier_perms.isPermExist("Display Salary")) ? " e.emp_salary, e.emp_bonus " : " '' AS emp_salary , '' AS emp_bonus "
 
     // Build the final query
     const query = `
@@ -59,15 +59,15 @@ router.get("/employees",jwtVerify,async (req,res)=>{
         e.emp_email,
         ${access_salary} 
         FROM employees e 
-        ${Roles_JOIN}
-        ${Perms_JOIN}
-        ${Roles_CONDITION || Rest_CONDITION ? " WHERE " : ""} /* roles filtering exists any way no need to check*/
+        ${roles_JOIN}
+        ${perms_JOIN}
+        ${roles_CONDITION || Rest_CONDITION ? " WHERE " : ""} /* roles filtering exists any way no need to check*/
         ${Rest_CONDITION}
-        ${Roles_CONDITION && Rest_CONDITION ? " AND " : ""}
-        ${Roles_CONDITION}
+        ${roles_CONDITION && Rest_CONDITION ? " AND " : ""}
+        ${roles_CONDITION}
         GROUP BY /* so we could group rows instead of repeating for each new perm */
             e.emp_id, e.emp_name, r.role_name, e.emp_abscence, e.emp_rate, e.emp_position, e.emp_email, e.emp_salary, e.emp_bonus
-        ${Perms_CONDITION}
+        ${perms_CONDITION}
         LIMIT ${size} OFFSET ${(pagination - 1) * size}`;
 
       const users = await executeMySqlQuery(query , "Error executing /employees list GET");
@@ -98,7 +98,7 @@ router.get("/employees",jwtVerify,async (req,res)=>{
 
     - update user data then we check modifier perms and role and both  action & toUpdate must be MD
     - update user Role same goes but MR
-    - update user Perms same but MP
+    - update user perms same but MP
     - update user Salary same but MS
     
     */
@@ -106,11 +106,11 @@ router.get("/employees",jwtVerify,async (req,res)=>{
         try {   
                 /*
                     -newRole is string of newRole that will be assigned to user
-                    -newPerms is string of all perms will be set to user 
+                    -newperms is string of all perms will be set to user 
                    
                 */
                 // let & not const as we will delete emp_salary from userData if no perms
-                    let { modifier_id , emp_id , other_emp_email , role_name : newRole, emp_perms : newPerms ,   ...userData} = req.body;
+                    let { modifier_id , emp_id , other_emp_email , role_name : newRole, emp_perms : newperms ,   ...userData} = req.body;
                 // action holds perms needed for changes to happen
                     const {actions} = req.query;
 
@@ -127,14 +127,14 @@ router.get("/employees",jwtVerify,async (req,res)=>{
                     const userRole = await User.getUserRole(emp_id ,"Error Getting user Role" );
 
                     // if modifier have same role or higher and permession he can update others
-                    const  modifierPerms = await User.getUserPerms(modifier_id ,"Error Getting modifier perms");
+                    const  modifierperms = await User.getUserperms(modifier_id ,"Error Getting modifier perms");
                     // create set instance of it 
-                    let modifierSetPerms = new Perms(modifierPerms);
+                    let modifierSetperms = new perms(modifierperms);
                     
                     /**********************************Data Update*********************************************/
-                    if(actions.includes("Modify Data") && modifierSetPerms.isPermExist("Modify Data")){
+                    if(actions.includes("Modify Data") && modifierSetperms.isPermExist("Modify Data")){
                         // if modifier has MS do nothing if not remove emp_salary as he dont have access to edit it
-                        userData = modifierSetPerms.isPermExist("Modify Salary") ? userData : delete userData.emp_salary ;
+                        userData = modifierSetperms.isPermExist("Modify Salary") ? userData : delete userData.emp_salary ;
                         
                         if(modifierRole === "SuperAdmin"){
 
@@ -158,11 +158,11 @@ router.get("/employees",jwtVerify,async (req,res)=>{
                          
 
                     }
-                    else if(actions.includes("Modify Data") && !modifierSetPerms.isPermExist("Modify Data")){ 
+                    else if(actions.includes("Modify Data") && !modifierSetperms.isPermExist("Modify Data")){ 
                         failing_messages.push({success:false , message: "Not Allowed To Modify User Data"})
                     }
                     /**********************************Role Update*********************************************/
-                    if (actions.includes("Modify Role")   && modifierSetPerms.isPermExist("Modify Role")){
+                    if (actions.includes("Modify Role")   && modifierSetperms.isPermExist("Modify Role")){
                         // Modidify Role
 
                         if(modifierRole === "SuperAdmin"){
@@ -176,34 +176,34 @@ router.get("/employees",jwtVerify,async (req,res)=>{
                         
 
                     } 
-                    else if(actions.includes("Modify Role")   && !modifierSetPerms.isPermExist("Modify Role")){ // when modifier doesn't have required perm
+                    else if(actions.includes("Modify Role")   && !modifierSetperms.isPermExist("Modify Role")){ // when modifier doesn't have required perm
                         failing_messages.push({success:false , message: "Not Allowed To Modify User Role"})
                     }
 
-                    /**********************************Perms Update*********************************************/
-                    if (actions.includes("Modify Perms")   && modifierSetPerms.isPermExist("Modify Perms")){
-                        // Modidify Perms
-                        const oldUserPerms = await executeMySqlQuery(`SELECT COALESCE((SELECT COALESCE(GROUP_CONCAT(DISTINCT p.perm_name SEPARATOR ', ') , 'None') FROM Perms p JOIN Employee_Perms ep ON p.perm_id = ep.perm_id WHERE ep.emp_id =${emp_id}), 'None') AS perm_name;`,"Error Getting Old User Perms");
-                        const oldUserPermsSet=new Set( oldUserPerms[0].perm_name.split(", ")) ;
+                    /**********************************perms Update*********************************************/
+                    if (actions.includes("Modify perms")   && modifierSetperms.isPermExist("Modify perms")){
+                        // Modidify perms
+                        const oldUserperms = await executeMySqlQuery(`SELECT COALESCE((SELECT COALESCE(GROUP_CONCAT(DISTINCT p.perm_name SEPARATOR ', ') , 'None') FROM perms p JOIN employee_perms ep ON p.perm_id = ep.perm_id WHERE ep.emp_id =${emp_id}), 'None') AS perm_name;`,"Error Getting Old User perms");
+                        const oldUserpermsSet=new Set( oldUserperms[0].perm_name.split(", ")) ;
 
                         if(modifierRole === "SuperAdmin"){
 
-                            const succeeded =await SuperAdmin.ChangeOtherUserPerms(emp_id , userRole , newPerms , oldUserPermsSet)
+                            const succeeded =await SuperAdmin.ChangeOtherUserperms(emp_id , userRole , newperms , oldUserpermsSet)
 
                                 if(!succeeded){
-                                    failing_messages.push({success:false , message: "Failed To Modify User Perms"})
+                                    failing_messages.push({success:false , message: "Failed To Modify User perms"})
                                 }
 
                         }
                         
                     }
-                    else if(actions.includes("Modify Perms")   && !modifierSetPerms.isPermExist("Modify Perms")){ 
+                    else if(actions.includes("Modify perms")   && !modifierSetperms.isPermExist("Modify perms")){ 
                         failing_messages.push({success:false , message: "Not Allowed To Modify User Permissions"})
                     }
                     /****************************************************/
                     // making sure not sending salary details if user has no perm
-                    const access_salary = (modifierSetPerms.isPermExist("Modify Salary") || modifierSetPerms.isPermExist("Display Salary")) ? " e.emp_salary, e.emp_bonus " : " '' AS emp_salary , '' AS emp_bonus "
-                    // left join to include records even if user doesn't exist in Roles table
+                    const access_salary = (modifierSetperms.isPermExist("Modify Salary") || modifierSetperms.isPermExist("Display Salary")) ? " e.emp_salary, e.emp_bonus " : " '' AS emp_salary , '' AS emp_bonus "
+                    // left join to include records even if user doesn't exist in roles table
                     const getUpdatedUserQuery = `SELECT 
                                                         e.emp_id, 
                                                         e.emp_name, 
@@ -217,9 +217,9 @@ router.get("/employees",jwtVerify,async (req,res)=>{
                                                     FROM 
                                                         employees e 
                                                     LEFT JOIN  
-                                                        Roles r ON e.emp_id = r.emp_id 
-                                                    LEFT JOIN Employee_Perms ep ON e.emp_id = ep.emp_id 
-                                                    LEFT JOIN Perms p ON ep.perm_id = p.perm_id
+                                                        roles r ON e.emp_id = r.emp_id 
+                                                    LEFT JOIN employee_perms ep ON e.emp_id = ep.emp_id 
+                                                    LEFT JOIN perms p ON ep.perm_id = p.perm_id
                                                     WHERE 
                                                         e.emp_id = ${emp_id}
                                                         GROUP BY
@@ -260,10 +260,10 @@ router.delete("/delete-employee", jwtVerify, async (req, res) => {
         if(!modifier_email || !modifier_id || !emp_id || !emp_email  ) return res.status(400).json({success:false,message:"Bad Request"});
         
         
-        let ModifierPermsSet = new Perms(await User.getUserPerms(modifier_id, "Error Getting User Perm /delete-employee", "Success Getting User Perm /delete-employee"));
+        let ModifierpermsSet = new perms(await User.getUserperms(modifier_id, "Error Getting User Perm /delete-employee", "Success Getting User Perm /delete-employee"));
         let isAllFulfilled = false;
         
-        if (ModifierPermsSet.isPermExist("Delete User")) {
+        if (ModifierpermsSet.isPermExist("Delete User")) {
             const ModifierRole = await User.getUserRole(modifier_id, "Error Getting User Role /delete-employee");
 
             if (ModifierRole === "SuperAdmin") {
@@ -330,9 +330,9 @@ router.get("/registered-approve",jwtVerify,async (req,res)=>{
 
 
                 
-            const ModifierPermsSet = new Perms(await User.getUserPerms(modifier_id , "Error Getting User Perm /delete-employee"));
+            const ModifierpermsSet = new perms(await User.getUserperms(modifier_id , "Error Getting User Perm /delete-employee"));
 
-            if(!ModifierPermsSet.isPermExist("Accept Registered")){
+            if(!ModifierpermsSet.isPermExist("Accept Registered")){
                 return res.json({success:false , message:"You Have No Permission"})
             } 
             
@@ -369,13 +369,13 @@ router.post("/registered-approve/accept",jwtVerify,async (req,res)=>{
 
 
         // Reqired to accept user and send email
-        if(!modifier_id || !modifier_email || !emp_email   ) return res.status(400 ).json({success:false,message:"Bad Request"});
+        if(!modifier_id || !modifier_email || !emp_email  ) return res.status(400 ).json({success:false,message:"Bad Request"});
 
-        const ModifierPermsSet = new Perms(await User.getUserPerms(modifier_id , "Error Getting User Perm /delete-employee"));
+        const ModifierpermsSet = new perms(await User.getUserperms(modifier_id , "Error Getting User Perm /delete-employee"));
 
         
 
-        if(!ModifierPermsSet.isPermExist("Accept Registered")){
+        if(!ModifierpermsSet.isPermExist("Accept Registered")){
             return res.json({success:false , message:"You Have No Permission"})
         }
 
@@ -447,9 +447,9 @@ router.delete("/registered-approve/decline",jwtVerify,async (req,res)=>{
         if(!modifier_id || !modifier_email || !declined_user_email   ) return res.status(400).json({success:false,message:"Bad Request"});
         
         
-        const ModifierPermsSet = new Perms(await User.getUserPerms(modifier_id , "Error Getting User Perm /delete-employee"));
+        const ModifierpermsSet = new perms(await User.getUserperms(modifier_id , "Error Getting User Perm /delete-employee"));
 
-        if(!ModifierPermsSet.isPermExist("Accept Registered")){
+        if(!ModifierpermsSet.isPermExist("Accept Registered")){
             return res.json({success:false , message:"You Have No Permission"})
         }
 
@@ -458,7 +458,7 @@ router.delete("/registered-approve/decline",jwtVerify,async (req,res)=>{
 
 
         if(deleteFromRigesterTable){
-            const isSent =await mailer(modifier_email ,emp_email, "You Got Accepted" , `
+            const isSent =await mailer(modifier_email ,declined_user_email, "You Got Accepted" , `
                 Dear ${emp_name},
     
                 Thank you for taking the time to apply for the position at Our Company. After careful consideration, we regret to inform you that we will not be moving forward with your application at this time.
@@ -483,7 +483,7 @@ router.delete("/registered-approve/decline",jwtVerify,async (req,res)=>{
              
     }
     catch(err){
-        consoleLog(`Error Register Page Delete Employee Data ${err}` ,"error");
+        console.error(`Error Register Page Delete Employee Data:`, err);
         res.json({
             success:false,
             message:"Error Register Page Delete Employee Data"

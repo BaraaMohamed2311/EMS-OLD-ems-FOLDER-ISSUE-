@@ -10,8 +10,8 @@ const router = require("express").Router();
   router.get("/main" ,jwtVerify,async (req,res)=>{
     try{ 
         const GetEmpsData = `SELECT COUNT(*) as count ,SUM(emp_abscence) as abscence , SUM(emp_salary) as salaries , SUM(emp_bonus) as bonus  FROM employees`;
-        const GetNumOfSuperAdmins = `SELECT COUNT(*) as count FROM employees e JOIN Roles r ON e.emp_id = r.emp_id WHERE r.role_name = 'SuperAdmin' `;
-        const GetNumOfAdmins = `SELECT COUNT(*) as count FROM employees e JOIN Roles r ON e.emp_id = r.emp_id WHERE r.role_name = 'Admin'`;
+        const GetNumOfSuperAdmins = `SELECT COUNT(*) as count FROM employees e JOIN roles r ON e.emp_id = r.emp_id WHERE r.role_name = 'SuperAdmin' `;
+        const GetNumOfAdmins = `SELECT COUNT(*) as count FROM employees e JOIN roles r ON e.emp_id = r.emp_id WHERE r.role_name = 'Admin'`;
 
 
         const EmpsData = await executeMySqlQuery(GetEmpsData,"Error Getting Num Of Emps");

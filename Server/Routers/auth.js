@@ -34,7 +34,7 @@ const consoleLog = require("../Utils/consoleLog.js")
             // get user role and send to response
             user[0].role_name =  await User.getUserRole(user[0].emp_id , "Error Get Role Login");
 
-            user[0].emp_perms =  await User.getUserPerms(user[0].emp_id , "Error Get Perms Login");
+            user[0].emp_perms =  await User.getUserperms(user[0].emp_id , "Error Get perms Login");
 
 
             // Compare request's password with hashed password
